@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biblioteca de Mangás - Estilo Anime</title>
+<style>
+  /* Fonte estilo anime */
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  body {
+    font-family: 'Press Start 2P', cursive;
+    background: #1e1e2f;  /* fundo escuro */
+    color: #f0f0f0;       /* texto claro */
+    margin: 0;
+    padding: 0;
+  }
+
+  header {
+    background: linear-gradient(90deg, #ff0055, #ff7700);
+    color: #fff;
+    padding: 1.5em;
+    text-align: center;
+    font-size: 1.5em;
+    text-shadow: 2px 2px #000;
+  }
+
+  main {
+    padding: 1em;
+    max-width: 900px;
+    margin: auto;
+  }
+
+  input, select, button {
+    padding: 0.6em;
+    margin: 0.5em 0;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9em;
+  }
+
+  input, select {
+    width: 48%;
+  }
+
+  button {
+    background: #ff0055;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  button:hover {
+    background: #ff7700;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1em;
+    background: #2e2e3f;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  th, td {
+    border-bottom: 1px solid #444;
+    padding: 0.8em;
+    text-align: left;
+  }
+
+  th {
+    background: #3e3e5f;
+    color: #fff;
+  }
+
+  canvas {
+    margin-top: 2em;
+    background: #2e2e3f;
+    border: 2px solid #444;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+<header>
+  Biblioteca de Mangás - Estilo Anime
+</header>
+<main>
+  <h2>Adicionar Mangá</h2>
+  <input type="text" id="nome" placeholder="Nome do mangá">
+  <input type="text" id="volumes" placeholder="Volumes">
+  <input type="text" id="tags" placeholder="Tags (separadas por vírgula)">
+  <input type="number" id="nota" placeholder="Nota 0-10" min="0" max="10">
+  <button onclick="adicionarManga()">Adicionar</button>
+
+  <h2>Filtros</h2>
+  <input type="text" id="filtroNome" placeholder="Filtrar por nome" oninput="renderizarLista()">
+  <input type="text" id="filtroTag" placeholder="Filtrar por tag" oninput="renderizarLista()">
+
+  <h2>Lista de Mangás</h2>
+  <table>
+    <thead>
+      <tr><th>Nome</th><th>Volumes</th><th>Tags</th><th>Nota</th></tr>
+    </thead>
+    <tbody id="listaMangás"></tbody>
+  </table>
+
+  <h2>Gráficos</h2>
+  <canvas id="graficoNotas" width="400" height="200"></canvas>
+  <canvas id="graficoVolumes" width="400" height="200"></canvas>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  let mangas = JSON.parse(localStorage.getItem('mangas')) || [];
+
+  function adicionarManga() {
+    const nome = document.getElementById('nome').value.trim();
+    const volumes = parseInt(document.getElementById('volumes').value.trim()) || 0;
+    const tags = document.getElementById('tags').value.trim();
+    const nota = parseFloat(document.getElementById('nota').value.trim()) || 0;
+
+    if (!nome) return alert('Digite o nome do mangá!');
+    mangas.push({ nome, volumes, tags: tags.split(',').map(t => t.trim()), nota });
+    localStorage.setItem('mangas', JSON.stringify(mangas));
+
+    document.getElementById('nome').value = '';
+    document.getElementById('volumes').value = '';
+    document.getElementById('tags').value = '';
+    document.getElementById('nota').value = '';
+
+    renderizarLista();
+    atualizarGraficos();
+  }
+
+  function renderizarLista() {
+    const tbody = document.getElementById('listaMangás');
+    tbody.innerHTML = '';
+    const filtroNome = document.getElementById('filtroNome').value.toLowerCase();
+    const filtroTag = document.getElementById('filtroTag').value.toLowerCase();
+
+    mangas
+      .filter(m => m.nome.toLowerCase().includes(filtroNome))
+      .filter(m => filtroTag === '' || m.tags.some(t => t.toLowerCase().includes(filtroTag)))
+      .forEach(m => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${m.nome}</td><td>${m.volumes}</td><td>${m.tags.join(', ')}</td><td>${m.nota}</td>`;
+        tbody.appendChild(tr);
+      });
+  }
+
+  let graficoNotas, graficoVolumes;
+
+  function atualizarGraficos() {
+    const ctxNotas = document.getElementById('graficoNotas').getContext('2d');
+    const ctxVolumes = document.getElementById('graficoVolumes').getContext('2d');
+
+    const nomes = mangas.map(m => m.nome);
+    const notas = mangas.map(m => m.nota);
+    const volumes = mangas.map(m => m.volumes);
+
+    if (graficoNotas) graficoNotas.destroy();
+    if (graficoVolumes) graficoVolumes.destroy();
+
+    graficoNotas = new Chart(ctxNotas, {
+      type: 'bar',
+      data: { labels: nomes, datasets: [{ label: 'Notas', data: notas, backgroundColor: 'rgba(255, 0, 85, 0.7)' }] },
+      options: { scales: { y: { beginAtZero: true, max: 10 } } }
+    });
+
+    graficoVolumes = new Chart(ctxVolumes, {
+      type: 'bar',
+      data: { labels: nomes, datasets: [{ label: 'Volumes', data: volumes, backgroundColor: 'rgba(255, 119, 0, 0.7)' }] },
+      options: { scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  renderizarLista();
+  atualizarGraficos();
+</script>
+</body>
+</html>
